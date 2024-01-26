@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Upload</title>
+    <style>
+        form {
+            margin: 0 auto;
+            width: 50%;
+            padding: 1rem;
+            border: 1px solid #ccc;
+            background-color: #f0f0f0;
+        }
+
+        label {
+            font-size: 1.2rem;
+        }
+
+        input {
+            font-size: 1rem;
+            color: #333;
+        }
+
+        input[type="submit"] {
+            background-color: #000;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <label for="frame_name">Frame Name:</label>
+        <input type="text" id="frame_name" name="frame_name" required>
+        <br>
+        <label for="file">Choose Image:</label>
+        <input type="file" id="file" name="file" accept="image/*" required>
+        <br>
+        <button type="submit">Upload</button>
+    </form>
+
+    <hr>
+
+    {% for frame_name, image_paths in image_paths.items() %}
+        <h2>{{ frame_name }}</h2>
+        {% for image_path in image_paths %}
+            <img src="{{ image_path }}" alt="{{ frame_name }}">
+        {% endfor %}
+        <hr>
+    {% endfor %}
+</body>
+
+</html>
