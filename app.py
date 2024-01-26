@@ -21,7 +21,7 @@ def upload():
     existing_frame_names = [folder for folder in os.listdir(uploads_path) if os.path.isdir(os.path.join(uploads_path, folder))]
 
     if frame_name not in existing_frame_names:
-        return 'Invalid Frame Name. Please choose an existing Frame Name.'
+        return render_template('Unsucess_page.html')
 
     if 'file' not in request.files:
         return 'No file part'
@@ -41,7 +41,7 @@ def upload():
     # ปรับเปลี่ยน image_paths เป็นไฟล์ใหม่ของแต่ละกรอบรูป
     image_paths[frame_name].append(os.path.join('uploads', frame_name, file.filename))
 
-    return 'File uploaded successfully!'
+    return render_template('Sucess_page.html')
 
 @app.route('/get_current_images/<frame_name>')
 def get_current_images(frame_name):
