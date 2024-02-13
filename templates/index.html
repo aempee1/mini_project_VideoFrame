@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Upload</title>
+    <title>Image/Video Upload</title>
     <style>
         form {
             margin: 0 auto;
@@ -35,18 +35,25 @@
         <label for="frame_name">Frame Name:</label>
         <input type="text" id="frame_name" name="frame_name" required>
         <br>
-        <label for="file">Choose Image:</label>
-        <input type="file" id="file" name="file" accept="image/*" required>
+        <label for="file">Choose File (Image/Video):</label>
+        <input type="file" id="file" name="file" accept="image/*,video/*" required>
         <br>
         <button type="submit">Upload</button>
     </form>
 
     <hr>
 
-    {% for frame_name, image_paths in image_paths.items() %}
+    {% for frame_name, file_paths in file_paths.items() %}
         <h2>{{ frame_name }}</h2>
-        {% for image_path in image_paths %}
-            <img src="{{ image_path }}" alt="{{ frame_name }}">
+        {% for file_path in file_paths %}
+            {% if file_path.endswith('.jpg') or file_path.endswith('.jpeg') or file_path.endswith('.png') %}
+                <img src="{{ file_path }}" alt="{{ frame_name }}">
+            {% elif file_path.endswith('.mp4') or file_path.endswith('.avi') or file_path.endswith('.mov') %}
+                <video width="320" height="240" controls>
+                    <source src="{{ file_path }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            {% endif %}
         {% endfor %}
         <hr>
     {% endfor %}
