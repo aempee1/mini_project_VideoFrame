@@ -1,51 +1,127 @@
-from flask import Flask, render_template, request, jsonify
 import os
+import tkinter as tk
+from PIL import Image, ImageTk
+import imageio
+from datetime import datetime
+import cv2
 
-app = Flask(__name__, static_url_path='/static')
+class WallpaperApp:
+    def __init__(self, root, directory_path):
+        self.root = root
+        self.root.title("Wallpaper App")
 
-# ให้ Flask มีตัวแปร global เพื่อเก็บที่เก็บรูปภาพของแต่ละกรอบรูป
-image_paths = {}
+        # Get screen width and height
+        screen_width = root.winfo_screenwidth()
+        screen_height = root.winfo_screenheight()
 
-@app.route('/')
-def index():
-    return render_template('index.html', image_paths=image_paths)
+        # Set the directory path
+        self.directory_path = directory_path
 
-@app.route('/upload', methods=['POST'])
-def upload():
-    global image_paths
+        # List all files in the directory
+        self.media_files = self.get_media_files()
+        self.file_index = 0
 
-    frame_name = request.form['frame_name']
+        # Check if the first file is an image or video
+        self.is_video = self.media_files and self.media_files[0].lower().endswith(('.mp4', '.avi', '.mov'))
+        self.is_image = not self.is_video
 
-    # ตรวจสอบว่า Frame Name ตรงกับ directory ที่มีอยู่ใน 'uploads' หรือไม่
-    uploads_path = 'uploads'
-    existing_frame_names = [folder for folder in os.listdir(uploads_path) if os.path.isdir(os.path.join(uploads_path, folder))]
+        if self.is_image:
+            # Load the first image
+            img = Image.open(os.path.join(self.directory_path, self.media_files[self.file_index]))
+            # Resize image to match screen dimensions
+            img = img.resize((screen_width, screen_height))
+            self.width, self.height = img.size
+            self.photo = ImageTk.PhotoImage(image=img)
+        elif self.is_video:
+            # Load the first frame of the video
+            video_path = os.path.join(self.directory_path, self.media_files[self.file_index])
+            self.video = cv2.VideoCapture(video_path)
+            self.width = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
+            self.height = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            self.show_video()
 
-    if frame_name not in existing_frame_names:
-        return render_template('Unsucess_page.html')
+        # Configure canvas to full screen
+        self.canvas = tk.Canvas(root, width=screen_width, height=screen_height)
+        self.canvas.pack(expand=tk.YES, fill=tk.BOTH)
 
-    if 'file' not in request.files:
-        return 'No file part'
+        self.canvas.config(width=screen_width, height=screen_height)
 
-    file = request.files['file']
+        self.clock_label = tk.Label(self.canvas, font=('calibri', 120, 'bold'), background='black', foreground='white')
+        self.canvas.create_window(screen_width-670, screen_height-100, window=self.clock_label, anchor='se')
 
-    if file.filename == '':
-        return 'No selected file'
+        self.update()
 
-    # สร้างโฟลเดอร์สำหรับแต่ละกรอบรูป (ถ้ายังไม่มี)
-    if frame_name not in image_paths:
-        image_paths[frame_name] = []
+        self.root.attributes("-fullscreen", True)
 
-    # บันทึกไฟล์ลงใน uploads ด้วยชื่อไฟล์เฉพาะของแต่ละกรอบรูป
-    file.save(os.path.join('uploads', frame_name, file.filename))
+        self.root.mainloop()
 
-    # ปรับเปลี่ยน image_paths เป็นไฟล์ใหม่ของแต่ละกรอบรูป
-    image_paths[frame_name].append(os.path.join('uploads', frame_name, file.filename))
+    def update(self):
+        if self.is_image:
+            # Display image
+            self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
+        elif self.is_video:
+            # Update video frame
+            frame = self.video.get_data(0)
+            self.photo = self.convert_frame(frame)
+            self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
 
-    return render_template('Sucess_page.html')
+        # Update clock
+        current_time = datetime.now().strftime('%H:%M:%S')
+        self.clock_label.config(text=current_time)
 
-@app.route('/get_current_images/<frame_name>')
-def get_current_images(frame_name):
-    return jsonify({'current_image_paths': image_paths.get(frame_name, [])})
+        self.root.after(1000, self.update)  # Update every second
 
-if __name__ == '__main__':
-    app.run(debug=True)
+        self.root.after(10, self.check_for_new_media)
+
+    def show_video(self):
+        while True:
+            ret, frame = self.video.read()
+            if not ret:
+                break
+
+            cv2.imshow("Video Display", frame)
+            cv2.setWindowProperty("Video Display", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
+            x = 1000 // 60
+            if cv2.waitKey(x) & 0xFF == ord("e"):
+                break
+
+        self.video.release()
+        cv2.destroyAllWindows()
+
+    def check_for_new_media(self):
+        # Check for new media files in the directory
+        new_media_files = self.get_media_files()
+
+        if new_media_files != self.media_files:
+            # If there are new files, remove old media and restart the application
+            self.remove_old_media()
+            self.root.destroy()
+            new_root = tk.Tk()
+            new_root.title("Wallpaper App")
+            new_root.attributes('-fullscreen', True)
+            new_wallpaper_app = WallpaperApp(new_root, self.directory_path)
+            new_root.mainloop()
+        else:
+            # If no new files, check again after 3 seconds
+            self.root.after(3000, self.check_for_new_media)
+
+    def remove_old_media(self):
+        # Remove old media files in the directory
+        for old_file in self.media_files:
+            file_path = os.path.join(self.directory_path, old_file)
+            os.remove(file_path)
+
+    def get_media_files(self):
+        # Return a list of media files in the directory
+        return [f for f in os.listdir(self.directory_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.mp4', '.avi', '.mov'))]
+
+    def convert_frame(self, frame):
+        img = Image.fromarray(frame)
+        photo = ImageTk.PhotoImage(image=img)
+        return photo
+
+# Specify the path of the directory with media files
+directory_path = "./uploads/frame1"  # Modify according to the directory you want
+
+app = WallpaperApp(tk.Tk(), directory_path)

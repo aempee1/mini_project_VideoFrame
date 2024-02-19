@@ -1,8 +1,9 @@
 import os
 import tkinter as tk
 from PIL import Image, ImageTk
-import cv2
 import imageio
+from datetime import datetime
+import cv2
 
 class WallpaperApp:
     def __init__(self, root, directory_path):
@@ -33,19 +34,20 @@ class WallpaperApp:
             self.photo = ImageTk.PhotoImage(image=img)
         elif self.is_video:
             # Load the first frame of the video
-            self.vid = cv2.VideoCapture(os.path.join(self.directory_path, self.media_files[self.file_index]))
-            self.width = int(self.vid.get(cv2.CAP_PROP_FRAME_WIDTH))
-            self.height = int(self.vid.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            self.canvas = tk.Canvas(root, width=screen_width, height=screen_height)
-            self.canvas.pack(expand=tk.YES, fill=tk.BOTH)
-            self.canvas.config(width=screen_width, height=screen_height)
-            self.update_video()
+            video_path = os.path.join(self.directory_path, self.media_files[self.file_index])
+            self.video = cv2.VideoCapture(video_path)
+            self.width = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
+            self.height = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            self.show_video()
 
         # Configure canvas to full screen
         self.canvas = tk.Canvas(root, width=screen_width, height=screen_height)
         self.canvas.pack(expand=tk.YES, fill=tk.BOTH)
 
         self.canvas.config(width=screen_width, height=screen_height)
+
+        self.clock_label = tk.Label(self.canvas, font=('calibri', 120, 'bold'), background='white', foreground='black' , border=0)
+        self.canvas.create_window(screen_width-670, screen_height-200, window=self.clock_label, anchor='se')
 
         self.update()
 
@@ -59,21 +61,33 @@ class WallpaperApp:
             self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
         elif self.is_video:
             # Update video frame
-            ret, frame = self.vid.read()
-            if ret:
-                self.photo = self.convert_frame(frame)
-                self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
+            frame = self.video.get_data(0)
+            self.photo = self.convert_frame(frame)
+            self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
+
+        # Update clock
+        current_time = datetime.now().strftime('%H:%M:%S')
+        self.clock_label.config(text=current_time)
+
+        self.root.after(1000, self.update)  # Update every second
 
         self.root.after(10, self.check_for_new_media)
 
-    def update_video(self):
-        ret, frame = self.vid.read()
-        if ret:
-            self.photo = self.convert_frame(frame)
-            self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
-            self.root.after(10, self.update_video)
-        else:
-            self.vid.release()
+    def show_video(self):
+        while True:
+            ret, frame = self.video.read()
+            if not ret:
+                break
+
+            cv2.imshow("Video Display", frame)
+            cv2.setWindowProperty("Video Display", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
+            x = 1000 // 60
+            if cv2.waitKey(x) & 0xFF == ord("e"):
+                break
+
+        self.video.release()
+        cv2.destroyAllWindows()
 
     def check_for_new_media(self):
         # Check for new media files in the directory
@@ -103,7 +117,6 @@ class WallpaperApp:
         return [f for f in os.listdir(self.directory_path) if f.lower().endswith(('.jpg', '.jpeg', '.png', '.mp4', '.avi', '.mov'))]
 
     def convert_frame(self, frame):
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         img = Image.fromarray(frame)
         photo = ImageTk.PhotoImage(image=img)
         return photo
