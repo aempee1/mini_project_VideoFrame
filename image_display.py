@@ -3,7 +3,6 @@ import tkinter as tk
 from PIL import Image, ImageTk
 import imageio
 from datetime import datetime
-import cv2
 
 class WallpaperApp:
     def __init__(self, root, directory_path):
@@ -35,19 +34,27 @@ class WallpaperApp:
         elif self.is_video:
             # Load the first frame of the video
             video_path = os.path.join(self.directory_path, self.media_files[self.file_index])
-            self.video = cv2.VideoCapture(video_path)
-            self.width = int(self.video.get(cv2.CAP_PROP_FRAME_WIDTH))
-            self.height = int(self.video.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            self.show_video()
+            self.video = imageio.get_reader(video_path)
+            first_frame = self.video.get_data(0)
+            self.width, self.height, _ = first_frame.shape
+            self.canvas = tk.Canvas(root, width=screen_width, height=screen_height)
+            self.canvas.pack(expand=tk.YES, fill=tk.BOTH)
+            self.canvas.config(width=screen_width, height=screen_height)
+            self.update_video()
+
+        # Calculate positions for Canvas and Clock Label
+        canvas_x = (screen_width - self.width) // 2
+        canvas_y = (screen_height - self.height) // 2
+        label_x = self.width // 2
+        label_y = self.height // 2
 
         # Configure canvas to full screen
         self.canvas = tk.Canvas(root, width=screen_width, height=screen_height)
         self.canvas.pack(expand=tk.YES, fill=tk.BOTH)
-
         self.canvas.config(width=screen_width, height=screen_height)
 
-        self.clock_label = tk.Label(self.canvas, font=('calibri', 120, 'bold'), background='white', foreground='black' , border=0)
-        self.canvas.create_window(screen_width-670, screen_height-200, window=self.clock_label, anchor='se')
+        self.clock_label = tk.Label(self.canvas, font=('calibri', 150, 'bold'), background=None, foreground='white')
+        self.canvas.create_window(label_x, label_y, window=self.clock_label)
 
         self.update()
 
@@ -66,33 +73,23 @@ class WallpaperApp:
             self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
 
         # Update clock
-        current_time = datetime.now().strftime('%H:%M:%S')
+        current_time = datetime.now().strftime(' %H : %M ')
         self.clock_label.config(text=current_time)
-
         self.root.after(1000, self.update)  # Update every second
+        self.root.after(2, self.check_for_new_media)
 
-        self.root.after(10, self.check_for_new_media)
-
-    def show_video(self):
-        while True:
-            ret, frame = self.video.read()
-            if not ret:
-                break
-
-            cv2.imshow("Video Display", frame)
-            cv2.setWindowProperty("Video Display", cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
-
-            x = 1000 // 60
-            if cv2.waitKey(x) & 0xFF == ord("e"):
-                break
-
-        self.video.release()
-        cv2.destroyAllWindows()
+    def update_video(self):
+        try:
+            frame = self.video.get_next_data()
+            self.photo = self.convert_frame(frame)
+            self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
+            self.root.after(10, self.update_video)
+        except StopIteration:
+            pass
 
     def check_for_new_media(self):
         # Check for new media files in the directory
         new_media_files = self.get_media_files()
-
         if new_media_files != self.media_files:
             # If there are new files, remove old media and restart the application
             self.remove_old_media()
