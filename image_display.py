@@ -1,6 +1,6 @@
 import os
 import tkinter as tk
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageFilter
 import imageio
 from datetime import datetime
 
@@ -64,12 +64,16 @@ class WallpaperApp:
 
     def update(self):
         if self.is_image:
-            # Display image
+            # Display blurred image
+            blurred_photo = self.blur_background(Image.open(os.path.join(self.directory_path, self.media_files[self.file_index])))
+            self.canvas.create_image(0, 0, image=blurred_photo, anchor=tk.NW)
             self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
         elif self.is_video:
-            # Update video frame
+            # Update video frame and display blurred frame
             frame = self.video.get_data(0)
             self.photo = self.convert_frame(frame)
+            blurred_photo = self.blur_background(Image.fromarray(frame))
+            self.canvas.create_image(0, 0, image=blurred_photo, anchor=tk.NW)
             self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
 
         # Update clock
@@ -82,6 +86,8 @@ class WallpaperApp:
         try:
             frame = self.video.get_next_data()
             self.photo = self.convert_frame(frame)
+            blurred_photo = self.blur_background(Image.fromarray(frame))
+            self.canvas.create_image(0, 0, image=blurred_photo, anchor=tk.NW)
             self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
             self.root.after(10, self.update_video)
         except StopIteration:
@@ -117,6 +123,10 @@ class WallpaperApp:
         img = Image.fromarray(frame)
         photo = ImageTk.PhotoImage(image=img)
         return photo
+
+    def blur_background(self, img):
+        blurred_img = img.filter(ImageFilter.GaussianBlur(radius=10))  # ปรับค่า radius ตามต้องการ
+        return ImageTk.PhotoImage(image=blurred_img)
 
 # Specify the path of the directory with media files
 directory_path = "./uploads/frame1"  # Modify according to the directory you want
