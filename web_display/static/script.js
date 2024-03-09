@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Update time
         var currentTime = now.toLocaleTimeString();
-        currentTimeElement.innerText = ;
+        currentTimeElement.innerText = currentTime;
 
         // Update date
         var currentDate = now.toDateString();
