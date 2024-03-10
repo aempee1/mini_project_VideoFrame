@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="content">
-        <video autoplay loop muted plays-inline  class="background">
+        <video autoplay loop muted plays-inline  class="background" id="background-video">
             <source src="{{ url_for('static', filename='bg_image/video1.mp4') }}" type="video/mp4">
         </video>
         <p id="current-time" > {{ current_time }} </p>
