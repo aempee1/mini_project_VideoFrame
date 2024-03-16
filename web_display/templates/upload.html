@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Video</title>
+</head>
+<body>
+    <h1>Upload Video</h1>
+    <form method="POST" action="/upload" enctype="multipart/form-data">
+        <input type="file" name="video">
+        <button onclick="updateAndReloadHomePage()" >Upload</button>
+    </form>
+    <script>
+        function updateAndReloadHomePage() {
+            // Fetch latest video and reload home page
+            fetchVideo().then(() => {
+                // Set a signal in localStorage to indicate page reload
+                localStorage.setItem('reload_page', 'true');
+                // Redirect to the home page
+                window.location.href = '/';
+            });
+        }
+    </script>
+    
+</body>
+</html>
