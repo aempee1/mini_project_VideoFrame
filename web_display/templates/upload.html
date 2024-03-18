@@ -1,16 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>Upload Video</title>
 </head>
+
 <body>
-    <h1>Upload Video</h1>
-    <form method="POST" action="/upload" enctype="multipart/form-data">
-        <input type="file" name="video">
-        <button onclick="updateAndReloadHomePage()" >Upload</button>
-    </form>
+    <div class="container">
+        <div class="card">
+            <h3>Upload Video</h3>
+            <div class="drop_box">
+                <header>
+                  <h4>Select File here</h4>
+                </header>
+                <form method="POST" action="/upload" enctype="multipart/form-data">
+                    <input type="file" name="video" >
+                    <button class="btn" onclick="updateAndReloadHomePage()">Upload</button>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
     <script>
         function updateAndReloadHomePage() {
             // Fetch latest video and reload home page
@@ -22,6 +36,7 @@
             });
         }
     </script>
-    
+
 </body>
+
 </html>
